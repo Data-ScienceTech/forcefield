@@ -1,0 +1,24 @@
+# Example: Add this to your repo at .github/workflows/forcefield.yml
+# This runs ForceField security checks on every push and PR.
+
+name: ForceField Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Data-ScienceTech/forcefield/.github/actions/forcefield@main
+        with:
+          mode: 'both'
+          sensitivity: 'medium'
+          audit-path: 'src/'
+          install-extras: 'ml'
+          fail-on-detection: 'true'
+          detection-threshold: '95'
