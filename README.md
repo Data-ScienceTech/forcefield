@@ -3,7 +3,8 @@
 [![PyPI version](https://img.shields.io/pypi/v/forcefield.svg)](https://pypi.org/project/forcefield/)
 [![Python versions](https://img.shields.io/pypi/pyversions/forcefield.svg)](https://pypi.org/project/forcefield/)
 [![License](https://img.shields.io/pypi/l/forcefield.svg)](https://pypi.org/project/forcefield/)
-[![Detection Rate](https://img.shields.io/badge/detection_rate-100%25-brightgreen.svg)](https://datasciencetech.ca/en/python-sdk)
+[![Detection Rate](https://img.shields.io/badge/detection-100%25_with_ML-brightgreen.svg)](https://github.com/Data-ScienceTech/forcefield)
+[![Regex Only](https://img.shields.io/badge/regex_only-81%25-blue.svg)](https://github.com/Data-ScienceTech/forcefield)
 
 **AI security for Python applications.** Detect prompt injection, PII leaks, jailbreaks, and LLM attacks in 3 lines of code. No API keys. No cloud dependency. Works offline.
 
