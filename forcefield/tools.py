@@ -12,7 +12,7 @@ import re
 from typing import Dict, List, Optional, Set
 
 from .config import BLOCKED_TOOLS, DESTRUCTIVE_TOOL_PATTERNS
-from .types import ToolEvalResult
+from .types import ToolAction, ToolEvalResult, ToolGovernorResult
 
 
 # Secret/credential patterns for tool argument inspection
@@ -78,3 +78,164 @@ def inspect_tool_args(arguments: str) -> Dict[str, List[str]]:
             findings["injection"].append(pat.pattern[:40])
 
     return findings
+
+
+# ---------------------------------------------------------------------------
+# Tool result inspection (Phase 4 expansion)
+# ---------------------------------------------------------------------------
+
+_PII_IN_RESULT = {
+    "email": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}"),
+    "phone": re.compile(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"),
+    "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+    "credit_card": re.compile(r"\b(?:\d[ -]*?){13,19}\b"),
+}
+
+
+def inspect_tool_result(result_text: str) -> Dict[str, List[str]]:
+    """Inspect tool call output for secrets, PII, or injection.
+
+    Returns a dict with keys ``secrets``, ``pii``, ``injection``.
+    """
+    findings: Dict[str, List[str]] = {"secrets": [], "pii": [], "injection": []}
+
+    for name, pat in _SECRET_PATTERNS.items():
+        if pat.search(result_text):
+            findings["secrets"].append(name)
+
+    for name, pat in _PII_IN_RESULT.items():
+        if pat.search(result_text):
+            findings["pii"].append(name)
+
+    for pat in _INJECTION_IN_ARGS:
+        if pat.search(result_text):
+            findings["injection"].append(pat.pattern[:40])
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# ToolGovernor (Phase 4 expansion)
+# ---------------------------------------------------------------------------
+
+class ToolGovernor:
+    """Policy-driven tool governance with pre-call and post-call inspection.
+
+    Args:
+        policies: Mapping of tool name (or substring) to ``ToolAction``.
+            If a tool name matches multiple policies, the most restrictive wins.
+        block_dangerous: Whether to block tools matching destructive patterns.
+        inspect_results: Whether ``after_call`` inspects tool output.
+    """
+
+    def __init__(
+        self,
+        policies: Optional[Dict[str, ToolAction]] = None,
+        *,
+        block_dangerous: bool = True,
+        inspect_results: bool = True,
+    ) -> None:
+        self._policies = policies or {}
+        self._block_dangerous = block_dangerous
+        self._inspect_results = inspect_results
+
+    def before_call(
+        self,
+        tool_name: str,
+        arguments: Optional[str] = None,
+    ) -> ToolGovernorResult:
+        """Evaluate a tool call *before* execution.
+
+        Checks the tool against configured policies, the default blocklist,
+        destructive-pattern list, and optionally inspects arguments for
+        secrets / injection.
+        """
+        name_lower = tool_name.lower()
+
+        # Check explicit policies first
+        for pattern, action in self._policies.items():
+            if pattern.lower() in name_lower:
+                if action == ToolAction.BLOCK:
+                    return ToolGovernorResult(
+                        allowed=False, action=ToolAction.BLOCK,
+                        reason="tool_blocked_by_policy", tool_name=tool_name,
+                    )
+                if action == ToolAction.REQUIRE_APPROVAL:
+                    return ToolGovernorResult(
+                        allowed=False, action=ToolAction.REQUIRE_APPROVAL,
+                        reason="requires_human_approval", tool_name=tool_name,
+                    )
+
+        # Default blocklist
+        if any(b in name_lower for b in BLOCKED_TOOLS):
+            return ToolGovernorResult(
+                allowed=False, action=ToolAction.BLOCK,
+                reason="tool_blocked", tool_name=tool_name,
+            )
+
+        # Destructive patterns
+        if self._block_dangerous and any(p in name_lower for p in DESTRUCTIVE_TOOL_PATTERNS):
+            return ToolGovernorResult(
+                allowed=False, action=ToolAction.REQUIRE_APPROVAL,
+                reason="requires_human_approval", tool_name=tool_name,
+            )
+
+        # Argument inspection
+        findings: Dict = {}
+        if arguments:
+            findings = inspect_tool_args(arguments)
+            if findings.get("injection"):
+                return ToolGovernorResult(
+                    allowed=False, action=ToolAction.BLOCK,
+                    reason="injection_in_arguments", tool_name=tool_name,
+                    findings=findings,
+                )
+            if findings.get("secrets"):
+                return ToolGovernorResult(
+                    allowed=False, action=ToolAction.BLOCK,
+                    reason="secrets_in_arguments", tool_name=tool_name,
+                    findings=findings,
+                )
+
+        return ToolGovernorResult(
+            allowed=True, action=ToolAction.ALLOW,
+            reason="tool_permitted", tool_name=tool_name,
+            findings=findings,
+        )
+
+    def after_call(
+        self,
+        tool_name: str,
+        result_text: str,
+    ) -> ToolGovernorResult:
+        """Inspect a tool call result *after* execution.
+
+        Looks for leaked secrets, PII, and injection payloads in the output.
+        """
+        if not self._inspect_results:
+            return ToolGovernorResult(
+                allowed=True, action=ToolAction.ALLOW,
+                reason="inspection_skipped", tool_name=tool_name,
+            )
+
+        findings = inspect_tool_result(result_text)
+        has_issue = any(findings.get(k) for k in ("secrets", "pii", "injection"))
+
+        if findings.get("injection"):
+            return ToolGovernorResult(
+                allowed=False, action=ToolAction.BLOCK,
+                reason="injection_in_result", tool_name=tool_name,
+                findings=findings,
+            )
+
+        if findings.get("secrets") or findings.get("pii"):
+            return ToolGovernorResult(
+                allowed=False, action=ToolAction.BLOCK,
+                reason="sensitive_data_in_result", tool_name=tool_name,
+                findings=findings,
+            )
+
+        return ToolGovernorResult(
+            allowed=True, action=ToolAction.ALLOW,
+            reason="result_clean", tool_name=tool_name,
+        )

@@ -161,3 +161,75 @@ class SelftestResult:
     missed: int = 0
     detection_rate: float = 0.0
     results: List[Dict] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Content safety (Phase 1)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ContentSafetyResult:
+    """Azure-compatible content safety result with per-category severity levels.
+
+    Severity uses 0/2/4/6 scale matching Azure Content Safety:
+      0 = safe, 2 = low, 4 = medium, 6 = high.
+    """
+    safe: bool
+    action: Action
+    category_scores: Dict[str, int] = field(default_factory=dict)
+    categories_blocked: List[str] = field(default_factory=list)
+    flags: List[str] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RateLimitResult:
+    """Result of a rate-limit check."""
+    allowed: bool
+    tier: str
+    retry_after: int = 0
+    remaining: int = 0
+    limit: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Abuse detection (Phase 3)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class AbuseResult:
+    """Result of output abuse/persona-deviation detection."""
+    is_abusive: bool
+    abuse_score: float
+    flags: List[str] = field(default_factory=list)
+    matched_category: Optional[str] = None
+    confidence: float = 0.0
+    details: Dict = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Tool governance (Phase 4)
+# ---------------------------------------------------------------------------
+
+
+class ToolAction(Enum):
+    """Policy action for a tool."""
+    ALLOW = "allow"
+    BLOCK = "block"
+    REQUIRE_APPROVAL = "require_approval"
+
+
+@dataclass
+class ToolGovernorResult:
+    """Result from ToolGovernor pre-call or post-call check."""
+    allowed: bool
+    action: ToolAction
+    reason: str
+    tool_name: str
+    findings: Dict = field(default_factory=dict)

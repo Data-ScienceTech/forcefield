@@ -20,13 +20,18 @@ from typing import Any, Dict, List, Optional, Set
 from .config import GuardConfig
 from .types import (
     Action,
+    AbuseResult,
+    ContentSafetyResult,
     ModerationResult,
     PIIType,
+    RateLimitResult,
     RedactResult,
     RedactionStrategy,
     ScanResult,
     SelftestResult,
+    ToolAction,
     ToolEvalResult,
+    ToolGovernorResult,
 )
 
 
@@ -66,6 +71,8 @@ class Guard:
             )
         self._session_tracker = None
         self._integrity_guard = None
+        self._rate_limiter = None
+        self._tool_governor = None
 
     @property
     def config(self) -> GuardConfig:
@@ -201,6 +208,23 @@ class Guard:
         return _moderate(text, strict=strict)
 
     # ------------------------------------------------------------------
+    # content_safety()
+    # ------------------------------------------------------------------
+
+    def content_safety(
+        self,
+        text: str,
+        *,
+        thresholds: Optional[Dict[str, int]] = None,
+    ) -> ContentSafetyResult:
+        """Azure Content Safety-compatible check (hate/violence/sexual/self-harm).
+
+        Returns ``ContentSafetyResult`` with 0/2/4/6 severity scores per category.
+        """
+        from .moderation import content_safety as _content_safety
+        return _content_safety(text, thresholds=thresholds)
+
+    # ------------------------------------------------------------------
     # evaluate_tool()
     # ------------------------------------------------------------------
 
@@ -217,6 +241,64 @@ class Guard:
             blocked_tools=blocked_tools,
             block_dangerous=self._config.block_dangerous_tools,
         )
+
+    # ------------------------------------------------------------------
+    # rate_check()
+    # ------------------------------------------------------------------
+
+    def rate_check(self, key: str, tier: str = "per_user") -> RateLimitResult:
+        """Check in-memory rate limit for *key* against *tier*."""
+        if self._rate_limiter is None:
+            from .ratelimit import RateLimiter
+            self._rate_limiter = RateLimiter()
+        return self._rate_limiter.check(key, tier)
+
+    # ------------------------------------------------------------------
+    # check_abuse()
+    # ------------------------------------------------------------------
+
+    def check_abuse(self, text: str, *, use_embeddings: bool = False) -> AbuseResult:
+        """Detect abusive or anomalous LLM output."""
+        from .abuse import detect_abuse
+        return detect_abuse(text, use_embeddings=use_embeddings)
+
+    # ------------------------------------------------------------------
+    # govern_tool()
+    # ------------------------------------------------------------------
+
+    def govern_tool(
+        self,
+        tool_name: str,
+        *,
+        arguments: Optional[str] = None,
+        result: Optional[str] = None,
+        policies: Optional[Dict[str, ToolAction]] = None,
+    ) -> ToolGovernorResult:
+        """Policy-driven tool governance (pre-call and/or post-call).
+
+        Pass *arguments* for pre-call checks; pass *result* for post-call
+        inspection.  If both are provided, runs pre-call first and returns
+        immediately on denial.
+        """
+        if self._tool_governor is None or policies is not None:
+            from .tools import ToolGovernor
+            self._tool_governor = ToolGovernor(
+                policies=policies,
+                block_dangerous=self._config.block_dangerous_tools,
+            )
+
+        if arguments is not None:
+            pre = self._tool_governor.before_call(tool_name, arguments)
+            if not pre.allowed:
+                return pre
+
+        if result is not None:
+            return self._tool_governor.after_call(tool_name, result)
+
+        if arguments is not None:
+            return self._tool_governor.before_call(tool_name, arguments)
+
+        return self._tool_governor.before_call(tool_name)
 
     # ------------------------------------------------------------------
     # session tracking

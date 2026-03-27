@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Tuple
 
-from .types import Action, ModerationResult
+from .types import Action, ModerationResult, ContentSafetyResult
 
 
 # ---------------------------------------------------------------------------
@@ -217,5 +217,99 @@ def moderate(text: str, *, strict: bool = False) -> ModerationResult:
     return ModerationResult(
         passed=True, action=Action.WARN,
         categories=categories, confidence_scores=scores,
+        flags=flags,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Azure-compatible content safety (Phase 1 expansion)
+# ---------------------------------------------------------------------------
+
+# Maps internal severity floats to Azure's 0/2/4/6 scale
+_SEVERITY_TO_AZURE = [
+    (0.90, 6),
+    (0.70, 4),
+    (0.40, 2),
+    (0.0,  0),
+]
+
+# The four Azure Content Safety categories and their internal equivalents
+_AZURE_CATEGORY_MAP = {
+    "Hate":     ["hate_speech"],
+    "Violence": ["violence"],
+    "Sexual":   ["sexual_content"],
+    "SelfHarm": ["self_harm"],
+}
+
+# Default thresholds per Azure category (block at severity >= this level)
+DEFAULT_CONTENT_SAFETY_THRESHOLDS: Dict[str, int] = {
+    "Hate": 4,
+    "Violence": 4,
+    "Sexual": 4,
+    "SelfHarm": 2,
+}
+
+
+def _severity_to_azure_level(severity: float) -> int:
+    for threshold, level in _SEVERITY_TO_AZURE:
+        if severity >= threshold:
+            return level
+    return 0
+
+
+def content_safety(
+    text: str,
+    *,
+    thresholds: Optional[Dict[str, int]] = None,
+) -> ContentSafetyResult:
+    """Azure Content Safety-compatible check for hate/violence/sexual/self-harm.
+
+    Returns ``ContentSafetyResult`` with ``category_scores`` using 0/2/4/6 severity
+    scale matching the Azure Content Safety API format.
+
+    Args:
+        text: Text to evaluate.
+        thresholds: Per-category block thresholds (0/2/4/6). Categories scoring at
+            or above their threshold trigger a block.  Defaults to
+            ``{"Hate": 4, "Violence": 4, "Sexual": 4, "SelfHarm": 2}``.
+    """
+    if not text:
+        return ContentSafetyResult(
+            safe=True, action=Action.ALLOW,
+            category_scores={"Hate": 0, "Violence": 0, "Sexual": 0, "SelfHarm": 0},
+        )
+
+    thresholds = thresholds or DEFAULT_CONTENT_SAFETY_THRESHOLDS
+    category_scores: Dict[str, int] = {}
+    flags: List[str] = []
+    blocked: List[str] = []
+
+    for azure_cat, internal_cats in _AZURE_CATEGORY_MAP.items():
+        max_severity = 0.0
+        hit = False
+        for icat in internal_cats:
+            compiled_list = _COMPILED.get(icat, [])
+            for pat in compiled_list:
+                if pat.search(text):
+                    max_severity = max(max_severity, CONTENT_PATTERNS[icat]["severity"])
+                    hit = True
+                    break
+
+        level = _severity_to_azure_level(max_severity) if hit else 0
+        category_scores[azure_cat] = level
+
+        if hit:
+            flags.append(f"{azure_cat.upper()}_SEVERITY_{level}")
+        if level >= thresholds.get(azure_cat, 4):
+            blocked.append(azure_cat)
+
+    safe = len(blocked) == 0
+    action = Action.BLOCK if not safe else Action.ALLOW
+
+    return ContentSafetyResult(
+        safe=safe,
+        action=action,
+        category_scores=category_scores,
+        categories_blocked=blocked,
         flags=flags,
     )

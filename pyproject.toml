@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forcefield"
-version = "0.3.1"
-description = "Lightweight AI security scanner -- detect prompt injection, PII leaks, and LLM attacks in 3 lines of Python."
+version = "0.4.0"
+description = "Zero-dependency AI security library -- prompt-injection detection, PII redaction, content safety, rate limiting, abuse detection, and tool governance for LLMs in 3 lines of Python."
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
@@ -13,14 +13,22 @@ authors = [
     {name = "Data Science Tech", email = "security@datasciencetech.ca"},
 ]
 keywords = [
-    "llm", "security", "prompt-injection", "pii", "ai-safety",
-    "guardrails", "firewall", "redaction", "moderation",
+    "llm", "llm-security", "security", "prompt-injection", "pii",
+    "ai-safety", "ai-firewall", "guardrails", "firewall", "redaction",
+    "moderation", "content-safety", "content-moderation", "rate-limiting",
+    "abuse-detection", "tool-governance", "tool-calling",
+    "data-leakage", "data-loss-prevention",
+    "openai", "chatgpt", "langchain", "agentic",
+    "adversarial-attacks", "jailbreak", "prompt-guard",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
     "Topic :: Security",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: FastAPI",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -34,6 +42,7 @@ classifiers = [
 [project.optional-dependencies]
 ml = [
     "onnxruntime>=1.17.0",
+    "sentence-transformers>=2.2.0",
 ]
 ml-sklearn = [
     "scikit-learn>=1.3.0",
@@ -64,6 +73,7 @@ Homepage = "https://datasciencetech.ca/en/python-sdk"
 Documentation = "https://datasciencetech.ca/en/python-sdk"
 Repository = "https://github.com/Data-ScienceTech/forcefield"
 Issues = "https://github.com/Data-ScienceTech/forcefield/issues"
+Changelog = "https://github.com/Data-ScienceTech/forcefield/releases"
 
 [tool.setuptools.packages.find]
 where = ["."]
