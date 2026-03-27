@@ -135,17 +135,52 @@ forcefield test http://localhost:8080/v1/scan --mode forcefield
 forcefield test https://your-api.com/chat --output report.json  # JSON for CI
 ```
 
-## CI / GitHub Actions
+## GitHub Action
+
+Add ForceField security checks to any repo with one step:
 
 ```yaml
-- name: Install ForceField
-  run: pip install forcefield[ml]
+# .github/workflows/forcefield.yml
+name: ForceField Security
+on:
+  push:
+    branches: [main]
+  pull_request:
 
-- name: Run selftest
-  run: forcefield selftest
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Data-ScienceTech/forcefield/.github/actions/forcefield@main
+        with:
+          mode: 'both'           # selftest + audit
+          sensitivity: 'medium'
+          audit-path: 'src/'
+          install-extras: 'ml'   # ONNX ML model
+          fail-on-detection: 'true'
+          detection-threshold: '95'
+```
 
-- name: Audit source code
-  run: forcefield audit src/ --json > audit-report.json
+**Inputs:**
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `mode` | `both` | `selftest`, `audit`, or `both` |
+| `sensitivity` | `medium` | `low`, `medium`, `high`, `critical` |
+| `audit-path` | `src/` | Directory to scan for hardcoded prompts/PII |
+| `install-extras` | `ml` | pip extras (`ml`, `all`) |
+| `fail-on-detection` | `true` | Fail CI if detection rate is below threshold |
+| `detection-threshold` | `95` | Minimum detection rate (0-100) |
+
+**Outputs:** `detection-rate`, `detected`, `total`, `audit-issues`
+
+Or use ForceField directly in your own steps:
+
+```yaml
+- run: pip install forcefield[ml]
+- run: forcefield selftest
+- run: forcefield audit src/ --json > audit-report.json
 ```
 
 ## Optional Extras
@@ -181,4 +216,4 @@ ForceField is built by [Data Science Technologies](https://datasciencetech.ca). 
 
 ## License
 
-BSL-1.1
+Apache-2.0
