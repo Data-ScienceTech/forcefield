@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forcefield"
-version = "0.3.0"
+version = "0.3.1"
 description = "Lightweight AI security scanner -- detect prompt injection, PII leaks, and LLM attacks in 3 lines of Python."
 readme = "README.md"
-license = {text = "BSL-1.1"}
+license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
 authors = [
     {name = "Data Science Tech", email = "security@datasciencetech.ca"},
