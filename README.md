@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Data-ScienceTech/forcefield/.github/actions/forcefield@main
+      - uses: Data-ScienceTech/forcefield@v0.3.1
         with:
           mode: 'both'           # selftest + audit
           sensitivity: 'medium'

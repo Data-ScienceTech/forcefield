@@ -1,0 +1,126 @@
+name: 'ForceField AI Security Scanner'
+description: 'Scan your codebase and LLM prompts for prompt injection, PII leaks, and security vulnerabilities.'
+author: 'Data Science Technologies'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  mode:
+    description: 'Scan mode: selftest, audit, or both'
+    required: false
+    default: 'both'
+  sensitivity:
+    description: 'Detection sensitivity: low, medium, high, critical'
+    required: false
+    default: 'medium'
+  audit-path:
+    description: 'Path to scan for hardcoded prompts and PII (used in audit mode)'
+    required: false
+    default: 'src/'
+  install-extras:
+    description: 'pip extras to install (e.g. ml, all)'
+    required: false
+    default: 'ml'
+  fail-on-detection:
+    description: 'Fail the workflow if selftest detection rate drops below threshold'
+    required: false
+    default: 'true'
+  detection-threshold:
+    description: 'Minimum detection rate (0-100) to pass. Only used if fail-on-detection is true.'
+    required: false
+    default: '95'
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.12'
+
+outputs:
+  detection-rate:
+    description: 'Selftest detection rate (e.g. 100)'
+    value: ${{ steps.selftest.outputs.detection_rate }}
+  detected:
+    description: 'Number of attacks detected'
+    value: ${{ steps.selftest.outputs.detected }}
+  total:
+    description: 'Total number of attacks tested'
+    value: ${{ steps.selftest.outputs.total }}
+  audit-issues:
+    description: 'Number of audit issues found'
+    value: ${{ steps.audit.outputs.issues }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install ForceField
+      shell: bash
+      run: |
+        pip install --quiet "forcefield[${{ inputs.install-extras }}]"
+
+    - name: Run selftest
+      id: selftest
+      if: inputs.mode == 'selftest' || inputs.mode == 'both'
+      shell: bash
+      run: |
+        echo "::group::ForceField Selftest"
+        OUTPUT=$(forcefield selftest --sensitivity ${{ inputs.sensitivity }} 2>&1) || true
+        echo "$OUTPUT"
+        echo "::endgroup::"
+
+        # Parse detection rate from output
+        RATE=$(echo "$OUTPUT" | grep -oP '\d+(?=/\d+)' | head -1)
+        TOTAL=$(echo "$OUTPUT" | grep -oP '(?<=/)\d+' | head -1)
+        if [ -n "$RATE" ] && [ -n "$TOTAL" ]; then
+          PCT=$(( RATE * 100 / TOTAL ))
+          echo "detection_rate=$PCT" >> $GITHUB_OUTPUT
+          echo "detected=$RATE" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+          echo "### ForceField Selftest Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Detection Rate | **${PCT}%** (${RATE}/${TOTAL}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Sensitivity | ${{ inputs.sensitivity }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ inputs.fail-on-detection }}" = "true" ]; then
+            THRESHOLD=${{ inputs.detection-threshold }}
+            if [ "$PCT" -lt "$THRESHOLD" ]; then
+              echo "::error::Detection rate ${PCT}% is below threshold ${THRESHOLD}%"
+              exit 1
+            fi
+          fi
+        fi
+
+    - name: Run audit
+      id: audit
+      if: inputs.mode == 'audit' || inputs.mode == 'both'
+      shell: bash
+      run: |
+        AUDIT_PATH="${{ inputs.audit-path }}"
+        if [ -d "$AUDIT_PATH" ]; then
+          echo "::group::ForceField Audit ($AUDIT_PATH)"
+          OUTPUT=$(forcefield audit "$AUDIT_PATH" --json 2>&1) || true
+          echo "$OUTPUT"
+          echo "::endgroup::"
+
+          ISSUES=$(echo "$OUTPUT" | grep -c '"severity"' || echo "0")
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+
+          echo "### ForceField Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Path Scanned | \`${AUDIT_PATH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Issues Found | **${ISSUES}** |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "::warning::Audit path '$AUDIT_PATH' not found, skipping audit"
+          echo "issues=0" >> $GITHUB_OUTPUT
+        fi
