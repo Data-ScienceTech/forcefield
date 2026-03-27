@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forcefield"
+version = "0.3.0"
+description = "Lightweight AI security scanner -- detect prompt injection, PII leaks, and LLM attacks in 3 lines of Python."
+readme = "README.md"
+license = {text = "BSL-1.1"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Data Science Tech", email = "security@datasciencetech.ca"},
+]
+keywords = [
+    "llm", "security", "prompt-injection", "pii", "ai-safety",
+    "guardrails", "firewall", "redaction", "moderation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+ml = [
+    "onnxruntime>=1.17.0",
+]
+ml-sklearn = [
+    "scikit-learn>=1.3.0",
+    "joblib>=1.3.0",
+]
+cloud = [
+    "httpx>=0.25.0",
+]
+langchain = [
+    "langchain-core>=0.1.0",
+]
+fastapi = [
+    "fastapi>=0.100.0",
+]
+all = [
+    "forcefield[ml,cloud,langchain,fastapi]",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+]
+
+[project.scripts]
+forcefield = "forcefield.cli:main"
+
+[project.urls]
+Homepage = "https://datasciencetech.ca/en/python-sdk"
+Documentation = "https://datasciencetech.ca/en/python-sdk"
+Repository = "https://github.com/Data-ScienceTech/forcefield"
+Issues = "https://github.com/Data-ScienceTech/forcefield/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["forcefield*"]
+
+[tool.setuptools.package-data]
+forcefield = ["models/*.joblib", "models/*.onnx", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
