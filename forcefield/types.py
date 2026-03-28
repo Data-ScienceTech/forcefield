@@ -233,3 +233,51 @@ class ToolGovernorResult:
     reason: str
     tool_name: str
     findings: Dict = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Constitution / Policy Engine (Phase 7 -- Governance)
+# ---------------------------------------------------------------------------
+
+
+class PolicyAction(Enum):
+    """Action defined in a constitution rule."""
+    ALLOW = "allow"
+    BLOCK = "block"
+    CONFIRM = "confirm"
+    LOG = "log"
+
+
+@dataclass
+class PolicyVerdict:
+    """Result of evaluating an event against the constitution."""
+    allowed: bool
+    action: PolicyAction
+    rule_matched: Optional[str] = None
+    reason: str = ""
+    domain: str = ""
+    target: str = ""
+
+    def to_dict(self) -> Dict:
+        return {
+            "allowed": self.allowed,
+            "action": self.action.value,
+            "rule_matched": self.rule_matched,
+            "reason": self.reason,
+            "domain": self.domain,
+            "target": self.target,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Command & filename scanning (Phase 6 -- Sentinel)
+# ---------------------------------------------------------------------------
+
+# Re-exported from their modules for convenience.
+# The canonical definitions live in forcefield.commands and forcefield.files.
+# Import here so `from forcefield.types import CommandScanResult` works.
+try:
+    from .commands import CommandScanResult, CommandFinding  # noqa: F401
+    from .files import FilenameScanResult, FilenameFinding  # noqa: F401
+except ImportError:
+    pass

@@ -27,6 +27,8 @@ except ImportError:
 
 def _get_guard(sensitivity: str, **kwargs: Any):
     from ..guard import Guard
+    from ..telemetry import record_integration
+    record_integration("fastapi")
     return Guard(sensitivity=sensitivity, **kwargs)
 
 

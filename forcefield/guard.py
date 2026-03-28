@@ -57,6 +57,8 @@ class Guard:
         custom_blocked_patterns: Optional[List[str]] = None,
         redaction_strategy: str = "mask",
         config: Optional[GuardConfig] = None,
+        telemetry: bool = False,
+        api_key: Optional[str] = None,
     ):
         if config is not None:
             self._config = config
@@ -73,6 +75,10 @@ class Guard:
         self._integrity_guard = None
         self._rate_limiter = None
         self._tool_governor = None
+        self._protected_paths = None
+
+        from .telemetry import get_collector
+        self._telemetry = get_collector(enabled=telemetry, api_key=api_key)
 
     @property
     def config(self) -> GuardConfig:
@@ -164,6 +170,8 @@ class Guard:
             action = Action.ALLOW
 
         elapsed = (time.monotonic() - t0) * 1000
+        self._telemetry.record("scan", blocked=blocked, risk_score=risk_score,
+                               threat_codes=[t.code for t in threats])
         return ScanResult(
             blocked=blocked,
             action=action,
@@ -196,7 +204,9 @@ class Guard:
         from .pii import redact as _redact
 
         strat = RedactionStrategy(strategy or self._config.redaction_strategy)
-        return _redact(text, strategy=strat, pii_types=pii_types)
+        result = _redact(text, strategy=strat, pii_types=pii_types)
+        self._telemetry.record("redact")
+        return result
 
     # ------------------------------------------------------------------
     # moderate()
@@ -205,7 +215,9 @@ class Guard:
     def moderate(self, text: str, *, strict: bool = False) -> ModerationResult:
         """Moderate LLM output for harmful content."""
         from .moderation import moderate as _moderate
-        return _moderate(text, strict=strict)
+        result = _moderate(text, strict=strict)
+        self._telemetry.record("moderate", blocked=not result.passed)
+        return result
 
     # ------------------------------------------------------------------
     # content_safety()
@@ -222,7 +234,9 @@ class Guard:
         Returns ``ContentSafetyResult`` with 0/2/4/6 severity scores per category.
         """
         from .moderation import content_safety as _content_safety
-        return _content_safety(text, thresholds=thresholds)
+        result = _content_safety(text, thresholds=thresholds)
+        self._telemetry.record("content_safety", blocked=not result.safe)
+        return result
 
     # ------------------------------------------------------------------
     # evaluate_tool()
@@ -236,11 +250,13 @@ class Guard:
     ) -> ToolEvalResult:
         """Evaluate whether a tool call should be allowed."""
         from .tools import evaluate_tool as _eval
-        return _eval(
+        result = _eval(
             tool_name,
             blocked_tools=blocked_tools,
             block_dangerous=self._config.block_dangerous_tools,
         )
+        self._telemetry.record("evaluate_tool", blocked=not result.allowed)
+        return result
 
     # ------------------------------------------------------------------
     # rate_check()
@@ -260,7 +276,10 @@ class Guard:
     def check_abuse(self, text: str, *, use_embeddings: bool = False) -> AbuseResult:
         """Detect abusive or anomalous LLM output."""
         from .abuse import detect_abuse
-        return detect_abuse(text, use_embeddings=use_embeddings)
+        result = detect_abuse(text, use_embeddings=use_embeddings)
+        self._telemetry.record("check_abuse", blocked=result.is_abusive,
+                               risk_score=result.abuse_score)
+        return result
 
     # ------------------------------------------------------------------
     # govern_tool()
@@ -359,7 +378,9 @@ class Guard:
         Returns a ``TemplateValidationResult``.
         """
         from .templates import validate
-        return validate(model_id, template, allowlist=allowlist)
+        result = validate(model_id, template, allowlist=allowlist)
+        self._telemetry.record("validate_template")
+        return result
 
     # ------------------------------------------------------------------
     # prompt integrity
@@ -402,6 +423,70 @@ class Guard:
         return self._integrity_guard.verify_response(
             response_text, canary_token_id, strict=strict,
         )
+
+    # ------------------------------------------------------------------
+    # scan_command()
+    # ------------------------------------------------------------------
+
+    def scan_command(self, command: str) -> Any:
+        """Scan a terminal command for dangerous patterns.
+
+        Returns a ``CommandScanResult`` with ``dangerous``, ``severity``,
+        and ``findings``.
+        """
+        from .commands import scan_command as _scan_cmd
+        result = _scan_cmd(
+            command,
+            tool_eval_func=self.evaluate_tool if self._config.block_dangerous_tools else None,
+        )
+        self._telemetry.record("scan_command", blocked=result.dangerous,
+                               threat_codes=[f.code for f in result.findings])
+        return result
+
+    # ------------------------------------------------------------------
+    # scan_filename()
+    # ------------------------------------------------------------------
+
+    def scan_filename(self, filename: str, *, operation: str = "create") -> Any:
+        """Scan a filename for dangerous patterns.
+
+        Returns a ``FilenameScanResult`` with ``dangerous``, ``severity``,
+        and ``findings``.
+        """
+        from .files import scan_filename as _scan_fn
+        result = _scan_fn(filename, operation=operation)
+        self._telemetry.record("scan_filename", blocked=result.dangerous,
+                               threat_codes=[f.code for f in result.findings])
+        return result
+
+    # ------------------------------------------------------------------
+    # protected paths
+    # ------------------------------------------------------------------
+
+    def protect_path(self, pattern: str) -> None:
+        """Add a path pattern to the protected set."""
+        if self._protected_paths is None:
+            from .files import ProtectedPathSet
+            self._protected_paths = ProtectedPathSet()
+        self._protected_paths.add(pattern)
+
+    def unprotect_path(self, pattern: str) -> None:
+        """Remove a path pattern from the protected set."""
+        if self._protected_paths is not None:
+            self._protected_paths.remove(pattern)
+
+    def is_protected(self, filepath: str) -> bool:
+        """Check if a file path is in the protected set."""
+        if self._protected_paths is None:
+            return False
+        return self._protected_paths.is_protected(filepath)
+
+    @property
+    def protected_paths(self) -> List[str]:
+        """Return the list of protected path patterns."""
+        if self._protected_paths is None:
+            return []
+        return self._protected_paths.patterns
 
     # ------------------------------------------------------------------
     # selftest()

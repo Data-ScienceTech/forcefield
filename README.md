@@ -6,7 +6,7 @@
 [![Detection Rate](https://img.shields.io/badge/detection-100%25_with_ML-brightgreen.svg)](https://github.com/Data-ScienceTech/forcefield)
 [![Regex Only](https://img.shields.io/badge/regex_only-81%25-blue.svg)](https://github.com/Data-ScienceTech/forcefield)
 
-Lightweight AI security scanner for Python. Detect prompt injection, PII leaks, LLM attacks, abuse, and more in 3 lines of code.
+Lightweight AI security scanner for Python. Detect prompt injection, PII leaks, LLM attacks, abuse, dangerous commands, and file threats in 3 lines of code. Includes Sentinel command/file scanning and constitution governance policies for AI agent monitoring.
 
 ```python
 import forcefield
@@ -162,7 +162,47 @@ print(result.risk_score)     # 0.0 - 1.0
 print(result.reason_codes)   # ['HARDCODED_INSTRUCTION', ...]
 ```
 
-### Run the built-in selftest (116 attacks)
+### Sentinel: Command & file scanning
+
+```python
+# Scan terminal commands for dangerous patterns (rm -rf, curl|sh, credential exfil, etc.)
+result = guard.scan_command("rm -rf /")
+print(result.dangerous)     # True
+print(result.severity)      # 'critical'
+print(result.findings)      # [CommandFinding(code='recursive_delete', ...)]
+
+# Scan filenames for sensitive file patterns
+result = guard.scan_filename(".env", operation="delete")
+print(result.dangerous)     # True
+print(result.severity)      # 'critical'
+
+# Protected paths
+guard.protect_path(".gitignore")
+guard.is_protected(".gitignore")  # True
+```
+
+### Constitution governance policies
+
+```python
+from forcefield import Constitution, PolicyEngine
+
+# Load a YAML constitution
+const = Constitution.from_file(".forcefield/constitution.yaml")
+engine = PolicyEngine(const)
+
+# Evaluate events against your rules
+v = engine.evaluate_file(".env", "create")       # v.allowed == False, v.action == BLOCK
+v = engine.evaluate_command("rm -rf /")           # v.allowed == False, v.action == BLOCK
+v = engine.evaluate_tool("execute_shell")          # v.allowed == False, v.action == BLOCK
+v = engine.evaluate_content(risk_score=0.9, has_pii=True)  # v.allowed == False
+
+# Ships 3 templates: default.yaml, strict.yaml, permissive.yaml
+import importlib.resources, os
+pkg = os.path.dirname(importlib.import_module('forcefield.constitutions').__file__)
+const = Constitution.from_file(os.path.join(pkg, 'default.yaml'))
+```
+
+### Run the built-in selftest (121 attacks)
 
 ```python
 result = guard.selftest()
@@ -181,11 +221,13 @@ forcefield audit app.py                         # scan Python files for hardcode
 forcefield serve --port 8080                    # local proxy: POST /v1/scan, /v1/redact, etc.
 forcefield test https://api.example.com/v1/chat/completions --api-key sk-...  # endpoint security test
 forcefield validate-template meta-llama/Meta-Llama-3-8B-Instruct
+forcefield scan-command "rm -rf /"               # check a command for dangerous patterns
+forcefield scan-filename .env --operation delete  # check a filename for sensitive patterns
 ```
 
 ## Endpoint Security Testing
 
-Run the 116-attack catalog against any LLM endpoint (like pytest for AI security):
+Run the 121-attack catalog against any LLM endpoint (like pytest for AI security):
 
 ```bash
 forcefield test https://api.example.com/v1/chat/completions --api-key sk-...
@@ -294,6 +336,9 @@ async def chat(body: dict):
 - Chat template backdoors (Jinja2 pattern scanning, allowlist hashing)
 - Multi-turn attack sequences (crescendo, distraction-then-inject, context stuffing)
 - Prompt integrity violations (canary token omission, HMAC signature tampering)
+- Dangerous shell commands (22 patterns: rm -rf, curl|sh, chmod 777, reverse shells, etc.)
+- Sensitive file detection (12 patterns: .env, id_rsa, secrets.json, .pem, etc.)
+- Constitution governance (YAML policy engine for file/command/tool/content rules)
 
 ## GitHub Action
 
@@ -312,7 +357,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Data-ScienceTech/forcefield@v0.4.0
+      - uses: Data-ScienceTech/forcefield@v0.6.0
         with:
           mode: 'both'           # selftest + audit
           sensitivity: 'medium'

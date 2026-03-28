@@ -60,6 +60,43 @@ class TestGuard:
         assert result.detection_rate > 0.75
 
 
+class TestGuardSentinel:
+    def setup_method(self):
+        self.guard = Guard(sensitivity="medium")
+
+    def test_scan_command_dangerous(self):
+        result = self.guard.scan_command("rm -rf /")
+        assert result.dangerous is True
+        assert result.severity == "critical"
+
+    def test_scan_command_safe(self):
+        result = self.guard.scan_command("echo hello")
+        assert result.dangerous is False
+
+    def test_scan_filename_dangerous(self):
+        result = self.guard.scan_filename(".env")
+        assert result.dangerous is True
+
+    def test_scan_filename_safe(self):
+        result = self.guard.scan_filename("README.md")
+        assert result.dangerous is False
+
+    def test_protect_path(self):
+        self.guard.protect_path(".env")
+        assert self.guard.is_protected(".env") is True
+        assert self.guard.is_protected("README.md") is False
+        assert ".env" in self.guard.protected_paths
+
+    def test_unprotect_path(self):
+        self.guard.protect_path(".env")
+        self.guard.unprotect_path(".env")
+        assert self.guard.is_protected(".env") is False
+
+    def test_protected_paths_empty_by_default(self):
+        assert self.guard.protected_paths == []
+        assert self.guard.is_protected("anything") is False
+
+
 class TestGuardConfig:
     def test_custom_blocked_patterns(self):
         guard = Guard(custom_blocked_patterns=["forbidden phrase"])

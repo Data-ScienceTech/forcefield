@@ -1,5 +1,5 @@
 name: 'ForceField AI Security Scanner'
-description: 'Scan your codebase and LLM prompts for prompt injection, PII leaks, and security vulnerabilities.'
+description: 'Scan your codebase and LLM prompts for prompt injection, PII leaks, security vulnerabilities, dangerous commands, and file threats. Includes Sentinel command/file scanning and constitution governance policies.'
 author: 'Data Science Technologies'
 
 branding:

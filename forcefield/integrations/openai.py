@@ -29,6 +29,8 @@ def _get_guard():
     if _guard_instance is None:
         from ..guard import Guard
         _guard_instance = Guard()
+        from ..telemetry import record_integration
+        record_integration("openai")
     return _guard_instance
 
 

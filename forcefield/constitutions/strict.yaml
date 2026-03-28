@@ -1,0 +1,155 @@
+version: "1"
+name: "Strict Protection"
+
+defaults:
+  protection_level: strict
+  sensitivity: high
+  auto_kill_critical: true
+
+scope:
+  allowed_paths: ["src/**", "tests/**", "docs/**"]
+  denied_paths: [".git/**", "node_modules/**", ".env*", "*.pem", "*.key"]
+
+files:
+  - pattern: ".env*"
+    action: block
+    reason: "Environment files"
+  - pattern: "*.pem"
+    action: block
+    reason: "PEM certificate/key files"
+  - pattern: "*.key"
+    action: block
+    reason: "Private key files"
+  - pattern: "id_rsa*"
+    action: block
+    reason: "SSH private keys"
+  - pattern: "id_ed25519*"
+    action: block
+    reason: "SSH private keys"
+  - pattern: "*credentials*"
+    action: block
+    reason: "Credentials file"
+  - pattern: "*secrets*"
+    action: block
+    reason: "Secrets file"
+  - pattern: ".npmrc"
+    action: block
+    reason: "Package manager config"
+  - pattern: ".pypirc"
+    action: block
+    reason: "Package manager config"
+  - pattern: "authorized_keys"
+    action: block
+    reason: "SSH authorization file"
+  - pattern: "shadow"
+    action: block
+    reason: "System authentication file"
+  - pattern: "sudoers"
+    action: block
+    reason: "System privilege file"
+  - pattern: "Dockerfile*"
+    action: confirm
+    reason: "Container configuration"
+  - pattern: "docker-compose*"
+    action: confirm
+    reason: "Container orchestration"
+  - pattern: "*.sh"
+    action: confirm
+    operations: [create, delete]
+    reason: "Shell script"
+  - pattern: "*.bat"
+    action: confirm
+    operations: [create, delete]
+    reason: "Batch script"
+
+commands:
+  - pattern: "rm\\s+-[a-z]*r[a-z]*"
+    action: block
+    reason: "Recursive file deletion"
+  - pattern: "rm\\s+-[a-z]*f"
+    action: block
+    reason: "Forced file deletion"
+  - pattern: "curl.*\\|\\s*(sh|bash|zsh|python)"
+    action: block
+    reason: "Piped remote code execution"
+  - pattern: "wget.*\\|\\s*(sh|bash|zsh|python)"
+    action: block
+    reason: "Piped remote code execution"
+  - pattern: "chmod\\s+777"
+    action: block
+    reason: "World-writable permissions"
+  - pattern: "chmod\\s+\\+[sx]"
+    action: block
+    reason: "Setuid/setgid permission change"
+  - pattern: "nc\\s+-[a-z]*l"
+    action: block
+    reason: "Netcat listener"
+  - pattern: "/dev/tcp/"
+    action: block
+    reason: "Reverse shell"
+  - pattern: "base64\\s+(-d|--decode)"
+    action: block
+    reason: "Base64 decode (possible obfuscation)"
+  - pattern: "dd\\s+.*of=/dev/"
+    action: block
+    reason: "Direct disk write"
+  - pattern: "mkfs"
+    action: block
+    reason: "Filesystem format"
+  - pattern: ">\\s*/etc/"
+    action: block
+    reason: "Overwriting system config"
+  - pattern: "git push.*--force"
+    action: block
+    reason: "Force push forbidden"
+  - pattern: "sudo\\s"
+    action: confirm
+    reason: "Privilege escalation"
+  - pattern: "su\\s+-?\\s*$"
+    action: confirm
+    reason: "Switch to root"
+  - pattern: "crontab"
+    action: confirm
+    reason: "Crontab modification"
+  - pattern: "iptables|ufw"
+    action: confirm
+    reason: "Firewall rule modification"
+  - pattern: "npm install"
+    action: confirm
+    reason: "Package installation"
+  - pattern: "pip install"
+    action: confirm
+    reason: "Package installation"
+  - pattern: "eval\\s*\\("
+    action: block
+    reason: "Dynamic code evaluation"
+
+tools:
+  - name: execute_shell
+    action: block
+  - name: exec
+    action: block
+  - name: eval
+    action: block
+  - name: system
+    action: block
+  - name: rm
+    action: block
+  - name: format
+    action: block
+  - name: write_file
+    action: confirm
+  - name: delete_file
+    action: block
+  - name: send_email
+    action: confirm
+  - name: post
+    action: confirm
+  - name: read_file
+    action: allow
+
+content:
+  block_pii: true
+  block_secrets: true
+  moderation: true
+  max_risk_score: 0.5

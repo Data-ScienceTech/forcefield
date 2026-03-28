@@ -1,0 +1,117 @@
+version: "1"
+name: "Standard Protection"
+
+defaults:
+  protection_level: confirm
+  sensitivity: medium
+  auto_kill_critical: true
+
+scope:
+  allowed_paths: []
+  denied_paths: [".git/**", "node_modules/**"]
+
+files:
+  - pattern: ".env*"
+    action: block
+    reason: "Environment files may contain secrets"
+  - pattern: "*.pem"
+    action: block
+    reason: "PEM certificate/key files"
+  - pattern: "*.key"
+    action: block
+    reason: "Private key files"
+  - pattern: "id_rsa*"
+    action: block
+    reason: "SSH private keys"
+  - pattern: "id_ed25519*"
+    action: block
+    reason: "SSH private keys"
+  - pattern: "*credentials*"
+    action: block
+    reason: "Credentials file"
+  - pattern: "*secrets*.json"
+    action: block
+    reason: "Secrets file"
+  - pattern: "*secrets*.yaml"
+    action: block
+    reason: "Secrets file"
+  - pattern: ".npmrc"
+    action: confirm
+    reason: "Package manager config may contain tokens"
+  - pattern: ".pypirc"
+    action: confirm
+    reason: "Package manager config may contain tokens"
+  - pattern: "authorized_keys"
+    action: confirm
+    reason: "SSH authorization file"
+  - pattern: "Dockerfile*"
+    action: log
+    reason: "Container configuration"
+
+commands:
+  - pattern: "rm\\s+-[a-z]*r[a-z]*"
+    action: block
+    reason: "Recursive file deletion"
+  - pattern: "rm\\s+-[a-z]*f"
+    action: confirm
+    reason: "Forced file deletion"
+  - pattern: "curl.*\\|\\s*(sh|bash|zsh|python)"
+    action: block
+    reason: "Piped remote code execution"
+  - pattern: "wget.*\\|\\s*(sh|bash|zsh|python)"
+    action: block
+    reason: "Piped remote code execution"
+  - pattern: "chmod\\s+777"
+    action: block
+    reason: "World-writable permissions"
+  - pattern: "chmod\\s+\\+[sx]"
+    action: confirm
+    reason: "Setuid/setgid permission change"
+  - pattern: "nc\\s+-[a-z]*l"
+    action: block
+    reason: "Netcat listener (possible reverse shell)"
+  - pattern: "/dev/tcp/"
+    action: block
+    reason: "Bash /dev/tcp reverse shell pattern"
+  - pattern: "dd\\s+.*of=/dev/"
+    action: block
+    reason: "Direct disk write"
+  - pattern: "mkfs"
+    action: block
+    reason: "Filesystem format command"
+  - pattern: ">\\s*/etc/"
+    action: block
+    reason: "Overwriting system config"
+  - pattern: "git push.*--force"
+    action: confirm
+    reason: "Force push to remote"
+  - pattern: "sudo\\s"
+    action: log
+    reason: "Privilege escalation"
+  - pattern: "crontab"
+    action: confirm
+    reason: "Crontab modification"
+
+tools:
+  - name: execute_shell
+    action: block
+  - name: exec
+    action: block
+  - name: eval
+    action: block
+  - name: system
+    action: block
+  - name: write_file
+    action: confirm
+  - name: delete_file
+    action: confirm
+  - name: send_email
+    action: confirm
+  - name: read_file
+    action: allow
+
+content:
+  block_pii: true
+  block_secrets: true
+  moderation: true
+  max_risk_score: 0.7

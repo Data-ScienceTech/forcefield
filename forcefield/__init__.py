@@ -11,7 +11,7 @@ Detect prompt injection, PII leaks, and LLM attacks in 3 lines::
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.6.0"
 
 from .guard import Guard
 from .types import (
@@ -40,6 +40,10 @@ from .templates import TemplateValidationResult
 from .ratelimit import RateLimiter
 from .abuse import detect_abuse
 from .tools import ToolGovernor
+from .commands import scan_command, CommandScanResult, CommandFinding
+from .files import scan_filename, FilenameScanResult, FilenameFinding, ProtectedPathSet
+from .constitution import Constitution, PolicyEngine, ConstitutionRule
+from .types import PolicyAction, PolicyVerdict
 
 __all__ = [
     "Guard",
@@ -70,5 +74,17 @@ __all__ = [
     "RateLimiter",
     "ToolGovernor",
     "detect_abuse",
+    "scan_command",
+    "CommandScanResult",
+    "CommandFinding",
+    "scan_filename",
+    "FilenameScanResult",
+    "FilenameFinding",
+    "ProtectedPathSet",
+    "Constitution",
+    "PolicyEngine",
+    "ConstitutionRule",
+    "PolicyAction",
+    "PolicyVerdict",
     "__version__",
 ]

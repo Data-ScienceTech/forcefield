@@ -360,6 +360,48 @@ def _cmd_test(args: argparse.Namespace) -> int:
     return 0 if report.detection_rate >= 0.80 else 1
 
 
+def _cmd_scan_command(args: argparse.Namespace) -> int:
+    from .commands import scan_command
+
+    command = args.cmd_text if args.cmd_text != "-" else sys.stdin.read().strip()
+    result = scan_command(command)
+
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2))
+    else:
+        status = "DANGEROUS" if result.dangerous else "SAFE"
+        print(f"Command:  {result.command[:80]}")
+        print(f"Verdict:  {status}")
+        print(f"Severity: {result.severity}")
+        if result.findings:
+            for f in result.findings:
+                print(f"  - [{f.severity.upper():8s}] {f.code}: {f.description}")
+        if result.tool_eval and not result.tool_eval.allowed:
+            print(f"  - [TOOL    ] {result.tool_eval.tool_name}: {result.tool_eval.reason}")
+
+    return 1 if result.dangerous else 0
+
+
+def _cmd_scan_filename(args: argparse.Namespace) -> int:
+    from .files import scan_filename
+
+    result = scan_filename(args.filename, operation=args.operation)
+
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2))
+    else:
+        status = "DANGEROUS" if result.dangerous else "SAFE"
+        print(f"Filename:  {result.filename}")
+        print(f"Operation: {args.operation}")
+        print(f"Verdict:   {status}")
+        print(f"Severity:  {result.severity}")
+        if result.findings:
+            for f in result.findings:
+                print(f"  - [{f.severity.upper():8s}] {f.code}: {f.description}")
+
+    return 1 if result.dangerous else 0
+
+
 def _cmd_validate_template(args: argparse.Namespace) -> int:
     from .templates import validate
 
@@ -395,7 +437,7 @@ def main(argv: list | None = None) -> int:
         prog="forcefield",
         description="ForceField AI Security Scanner",
     )
-    parser.add_argument("--version", action="version", version="forcefield 0.3.0")
+    parser.add_argument("--version", action="version", version="forcefield 0.5.1")
     sub = parser.add_subparsers(dest="command")
 
     # selftest
@@ -439,6 +481,17 @@ def main(argv: list | None = None) -> int:
     p_test.add_argument("--quiet", "-q", action="store_true", help="Suppress per-attack output")
     p_test.add_argument("--output", "-o", default=None, help="Save JSON report to file")
 
+    # scan-command
+    p_cmd = sub.add_parser("scan-command", help="Scan a terminal command for dangerous patterns")
+    p_cmd.add_argument("cmd_text", help="Command to scan (use '-' for stdin)")
+    p_cmd.add_argument("--json", action="store_true")
+
+    # scan-filename
+    p_fn = sub.add_parser("scan-filename", help="Scan a filename for dangerous patterns")
+    p_fn.add_argument("filename", help="Filename or path to check")
+    p_fn.add_argument("--operation", default="create", choices=["create", "delete", "rename"])
+    p_fn.add_argument("--json", action="store_true")
+
     # validate-template
     p_tpl = sub.add_parser("validate-template", help="Validate a model's chat template for backdoors")
     p_tpl.add_argument("model_id", help="HuggingFace model ID or local path")
@@ -458,6 +511,10 @@ def main(argv: list | None = None) -> int:
         return _cmd_serve(args)
     elif args.command == "test":
         return _cmd_test(args)
+    elif args.command == "scan-command":
+        return _cmd_scan_command(args)
+    elif args.command == "scan-filename":
+        return _cmd_scan_filename(args)
     elif args.command == "validate-template":
         return _cmd_validate_template(args)
     else:

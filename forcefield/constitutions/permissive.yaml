@@ -1,0 +1,50 @@
+version: "1"
+name: "Permissive (Log Only)"
+
+defaults:
+  protection_level: monitor
+  sensitivity: low
+  auto_kill_critical: false
+
+scope:
+  allowed_paths: []
+  denied_paths: []
+
+files:
+  - pattern: ".env*"
+    action: log
+    reason: "Environment file access"
+  - pattern: "*.pem"
+    action: log
+    reason: "PEM file access"
+  - pattern: "*.key"
+    action: log
+    reason: "Key file access"
+  - pattern: "id_rsa*"
+    action: confirm
+    reason: "SSH key -- requires confirmation even in permissive mode"
+  - pattern: "id_ed25519*"
+    action: confirm
+    reason: "SSH key -- requires confirmation even in permissive mode"
+
+commands:
+  - pattern: "rm\\s+-[a-z]*r[a-z]*"
+    action: confirm
+    reason: "Recursive deletion still requires confirmation"
+  - pattern: "curl.*\\|\\s*(sh|bash|zsh|python)"
+    action: confirm
+    reason: "Piped remote execution still requires confirmation"
+  - pattern: "nc\\s+-[a-z]*l"
+    action: confirm
+    reason: "Netcat listener"
+  - pattern: "/dev/tcp/"
+    action: confirm
+    reason: "Possible reverse shell"
+
+tools: []
+
+content:
+  block_pii: false
+  block_secrets: true
+  moderation: false
+  max_risk_score: 0.9
