@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "forcefield"
 version = "0.7.0"
-description = "Zero-dependency AI security library -- prompt-injection detection, PII redaction, content safety, rate limiting, abuse detection, and tool governance for LLMs in 3 lines of Python."
+description = "Zero-dependency AI security library -- prompt-injection detection, PII redaction, content safety, rate limiting, abuse detection, tool governance, and security evals for LLMs in 3 lines of Python."
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
@@ -23,6 +23,8 @@ keywords = [
     "sentinel", "command-scanning", "file-protection",
     "vibecoding", "ai-agent-guard", "vibe-coding",
     "constitution", "governance",
+    "evals", "llm-eval", "security-eval", "red-team",
+    "benchmark", "attack-simulation", "security-testing",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
