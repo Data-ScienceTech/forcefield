@@ -489,6 +489,37 @@ class Guard:
         return self._protected_paths.patterns
 
     # ------------------------------------------------------------------
+    # eval()
+    # ------------------------------------------------------------------
+
+    def eval(
+        self,
+        suite_or_path: Any,
+        *,
+        on_progress: Any = None,
+    ) -> Any:
+        """Run a security eval suite and return an EvalReport.
+
+        Args:
+            suite_or_path: An ``EvalSuite`` instance, a path to a YAML file,
+                or a dict defining the suite.
+            on_progress: Optional callback ``(current, total, result)``.
+
+        Returns:
+            ``EvalReport`` with per-case results and aggregate statistics.
+        """
+        from .evals import EvalSuite, run_eval
+
+        if isinstance(suite_or_path, str):
+            suite = EvalSuite.from_file(suite_or_path)
+        elif isinstance(suite_or_path, dict):
+            suite = EvalSuite.from_dict(suite_or_path)
+        else:
+            suite = suite_or_path
+
+        return run_eval(suite, on_progress=on_progress)
+
+    # ------------------------------------------------------------------
     # selftest()
     # ------------------------------------------------------------------
 

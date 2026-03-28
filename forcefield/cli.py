@@ -402,6 +402,63 @@ def _cmd_scan_filename(args: argparse.Namespace) -> int:
     return 1 if result.dangerous else 0
 
 
+def _cmd_eval(args: argparse.Namespace) -> int:
+    from .evals import EvalSuite, run_eval
+
+    if args.builtin:
+        cats = args.categories.split(",") if args.categories else None
+        suite = EvalSuite.from_builtin(
+            name="Built-in Security Eval",
+            categories=cats,
+            sensitivity=args.sensitivity,
+        )
+    elif args.suite:
+        suite = EvalSuite.from_file(args.suite)
+    else:
+        print("Error: provide a suite YAML file or --builtin")
+        return 1
+
+    print(f"ForceField Eval: {suite.name}")
+    print(f"Cases: {len(suite.cases)}  Mode: {suite.target_mode}  Sensitivity: {suite.sensitivity}")
+    print("-" * 60)
+
+    def on_progress(current, total, result):
+        if args.verbose:
+            status = "PASS" if result.passed else "FAIL"
+            print(
+                f"  [{status:4s}] {result.case_id:40s}  "
+                f"risk={result.risk_score:.2f}  {result.expected}->{result.actual}"
+            )
+            for reason in result.failure_reasons:
+                print(f"         {reason}")
+
+    report = run_eval(suite, on_progress=on_progress)
+
+    print("-" * 60)
+    print(f"Total:     {report.total}")
+    print(f"Passed:    {report.passed_cases}")
+    print(f"Failed:    {report.failed_cases}")
+    print(f"Rate:      {report.detection_rate:.1%}")
+    print(f"Avg lat:   {report.avg_latency_ms:.1f}ms")
+    print(f"Time:      {report.elapsed_seconds:.2f}s")
+    print(f"Suite:     {'PASSED' if report.suite_passed else 'FAILED'}")
+
+    if report.failure_summary:
+        print("\nFailure reasons:")
+        for reason in report.failure_summary:
+            print(f"  - {reason}")
+
+    if args.json:
+        print(report.to_json())
+
+    if args.output:
+        with open(args.output, "w") as f:
+            f.write(report.to_json())
+        print(f"\nReport saved to {args.output}")
+
+    return 0 if report.suite_passed else 1
+
+
 def _cmd_validate_template(args: argparse.Namespace) -> int:
     from .templates import validate
 
@@ -492,6 +549,16 @@ def main(argv: list | None = None) -> int:
     p_fn.add_argument("--operation", default="create", choices=["create", "delete", "rename"])
     p_fn.add_argument("--json", action="store_true")
 
+    # eval
+    p_eval = sub.add_parser("eval", help="Run a security eval suite")
+    p_eval.add_argument("suite", nargs="?", default=None, help="Path to eval suite YAML file")
+    p_eval.add_argument("--builtin", action="store_true", help="Run built-in attack eval")
+    p_eval.add_argument("--categories", default=None, help="Comma-separated categories (with --builtin)")
+    p_eval.add_argument("--sensitivity", default="medium", choices=["low", "medium", "high", "critical"])
+    p_eval.add_argument("--verbose", "-v", action="store_true")
+    p_eval.add_argument("--json", action="store_true", help="Output results as JSON")
+    p_eval.add_argument("--output", "-o", default=None, help="Save JSON report to file")
+
     # validate-template
     p_tpl = sub.add_parser("validate-template", help="Validate a model's chat template for backdoors")
     p_tpl.add_argument("model_id", help="HuggingFace model ID or local path")
@@ -515,6 +582,8 @@ def main(argv: list | None = None) -> int:
         return _cmd_scan_command(args)
     elif args.command == "scan-filename":
         return _cmd_scan_filename(args)
+    elif args.command == "eval":
+        return _cmd_eval(args)
     elif args.command == "validate-template":
         return _cmd_validate_template(args)
     else:

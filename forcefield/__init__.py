@@ -11,7 +11,7 @@ Detect prompt injection, PII leaks, and LLM attacks in 3 lines::
 
 from __future__ import annotations
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 from .guard import Guard
 from .types import (
@@ -44,6 +44,7 @@ from .commands import scan_command, CommandScanResult, CommandFinding
 from .files import scan_filename, FilenameScanResult, FilenameFinding, ProtectedPathSet
 from .constitution import Constitution, PolicyEngine, ConstitutionRule
 from .types import PolicyAction, PolicyVerdict
+from .evals import EvalSuite, EvalCase, EvalReport, EvalCaseResult, PassCriteria, run_eval
 
 __all__ = [
     "Guard",
@@ -86,5 +87,11 @@ __all__ = [
     "ConstitutionRule",
     "PolicyAction",
     "PolicyVerdict",
+    "EvalSuite",
+    "EvalCase",
+    "EvalReport",
+    "EvalCaseResult",
+    "PassCriteria",
+    "run_eval",
     "__version__",
 ]

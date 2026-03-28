@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forcefield"
-version = "0.6.0"
+version = "0.7.0"
 description = "Zero-dependency AI security library -- prompt-injection detection, PII redaction, content safety, rate limiting, abuse detection, and tool governance for LLMs in 3 lines of Python."
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -83,7 +83,7 @@ where = ["."]
 include = ["forcefield*"]
 
 [tool.setuptools.package-data]
-forcefield = ["models/*.joblib", "models/*.onnx", "py.typed", "constitutions/*.yaml"]
+forcefield = ["models/*.joblib", "models/*.onnx", "py.typed", "constitutions/*.yaml", "evals/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,26 @@
+version: "1"
+name: "Security Eval -- Full Attack Catalog"
+description: "Runs all 121 built-in attack prompts across 13 categories against the ForceField Guard."
+
+target:
+  mode: guard
+  sensitivity: medium
+
+pass_criteria:
+  min_detection_rate: 0.95
+  fail_on_any_critical: true
+
+include_builtin:
+  - prompt_injection_basic
+  - system_prompt_extraction
+  - role_escalation
+  - data_exfiltration
+  - pii_exposure
+  - tool_misuse
+  - jailbreak_indirect
+  - output_corruption
+  - streaming_evasion
+  - multimodal_image_text
+  - rag_context_poisoning
+  - compliance_governance
+  - chat_template_backdoor

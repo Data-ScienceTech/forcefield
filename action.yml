@@ -8,7 +8,7 @@ branding:
 
 inputs:
   mode:
-    description: 'Scan mode: selftest, audit, or both'
+    description: 'Scan mode: selftest, audit, eval, or both'
     required: false
     default: 'both'
   sensitivity:
@@ -31,6 +31,14 @@ inputs:
     description: 'Minimum detection rate (0-100) to pass. Only used if fail-on-detection is true.'
     required: false
     default: '95'
+  eval-suite:
+    description: 'Path to a custom eval suite YAML file (used in eval mode)'
+    required: false
+    default: ''
+  eval-categories:
+    description: 'Comma-separated attack categories for built-in eval (used in eval mode without eval-suite)'
+    required: false
+    default: ''
   python-version:
     description: 'Python version to use'
     required: false
@@ -49,6 +57,15 @@ outputs:
   audit-issues:
     description: 'Number of audit issues found'
     value: ${{ steps.audit.outputs.issues }}
+  eval-passed:
+    description: 'Number of eval cases that passed'
+    value: ${{ steps.eval.outputs.eval_passed }}
+  eval-failed:
+    description: 'Number of eval cases that failed'
+    value: ${{ steps.eval.outputs.eval_failed }}
+  eval-detection-rate:
+    description: 'Eval detection rate (0-100)'
+    value: ${{ steps.eval.outputs.eval_detection_rate }}
 
 runs:
   using: 'composite'
@@ -123,4 +140,53 @@ runs:
         else
           echo "::warning::Audit path '$AUDIT_PATH' not found, skipping audit"
           echo "issues=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run eval
+      id: eval
+      if: inputs.mode == 'eval'
+      shell: bash
+      run: |
+        EVAL_SUITE="${{ inputs.eval-suite }}"
+        EVAL_CATS="${{ inputs.eval-categories }}"
+
+        if [ -n "$EVAL_SUITE" ] && [ -f "$EVAL_SUITE" ]; then
+          echo "::group::ForceField Eval ($EVAL_SUITE)"
+          OUTPUT=$(forcefield eval "$EVAL_SUITE" --sensitivity ${{ inputs.sensitivity }} --json 2>&1) || true
+        elif [ -n "$EVAL_CATS" ]; then
+          echo "::group::ForceField Eval (built-in: $EVAL_CATS)"
+          OUTPUT=$(forcefield eval --builtin --categories "$EVAL_CATS" --sensitivity ${{ inputs.sensitivity }} --json 2>&1) || true
+        else
+          echo "::group::ForceField Eval (built-in: all)"
+          OUTPUT=$(forcefield eval --builtin --sensitivity ${{ inputs.sensitivity }} --json 2>&1) || true
+        fi
+        echo "$OUTPUT"
+        echo "::endgroup::"
+
+        PASSED=$(echo "$OUTPUT" | grep -oP '"passed_cases":\s*\K\d+' | head -1)
+        FAILED=$(echo "$OUTPUT" | grep -oP '"failed_cases":\s*\K\d+' | head -1)
+        RATE=$(echo "$OUTPUT" | grep -oP '"detection_rate":\s*\K[0-9.]+' | head -1)
+
+        echo "eval_passed=${PASSED:-0}" >> $GITHUB_OUTPUT
+        echo "eval_failed=${FAILED:-0}" >> $GITHUB_OUTPUT
+
+        if [ -n "$RATE" ]; then
+          PCT=$(python3 -c "print(int(float('$RATE') * 100))")
+          echo "eval_detection_rate=$PCT" >> $GITHUB_OUTPUT
+        else
+          echo "eval_detection_rate=0" >> $GITHUB_OUTPUT
+        fi
+
+        echo "### ForceField Eval Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Passed | **${PASSED:-0}** |" >> $GITHUB_STEP_SUMMARY
+        echo "| Failed | **${FAILED:-0}** |" >> $GITHUB_STEP_SUMMARY
+        echo "| Detection Rate | **${PCT:-0}%** |" >> $GITHUB_STEP_SUMMARY
+
+        SUITE_PASSED=$(echo "$OUTPUT" | grep -oP '"suite_passed":\s*\K(true|false)' | head -1)
+        if [ "$SUITE_PASSED" = "false" ]; then
+          echo "::error::Eval suite FAILED"
+          exit 1
         fi
