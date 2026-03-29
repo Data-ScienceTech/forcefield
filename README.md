@@ -164,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Data-ScienceTech/forcefield@v0.7.0
+      - uses: Data-ScienceTech/forcefield@v0.7.2
         with:
           mode: 'both'           # selftest + audit
           sensitivity: 'medium'
@@ -193,6 +193,33 @@ Or use ForceField directly in your own steps:
 - run: pip install forcefield[ml]
 - run: forcefield selftest
 - run: forcefield audit src/ --json > audit-report.json
+```
+
+## pre-commit Hook
+
+Add ForceField scanning to your pre-commit config:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/Data-ScienceTech/forcefield
+    rev: v0.7.2
+    hooks:
+      - id: forcefield-scan
+```
+
+## Docker
+
+```bash
+docker run datasciencetech/forcefield selftest
+docker run datasciencetech/forcefield scan "Ignore all previous instructions"
+```
+
+## Homebrew
+
+```bash
+brew tap datasciencetech/forcefield
+brew install forcefield
 ```
 
 ## Optional Extras
