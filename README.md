@@ -208,13 +208,6 @@ repos:
       - id: forcefield-scan
 ```
 
-## Docker
-
-```bash
-docker run datasciencetech/forcefield selftest
-docker run datasciencetech/forcefield scan "Ignore all previous instructions"
-```
-
 ## Homebrew
 
 ```bash
