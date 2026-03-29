@@ -1,0 +1,16 @@
+- id: forcefield-scan
+  name: ForceField Scan
+  description: Scan files for prompt injection, PII, and security threats
+  entry: forcefield scan
+  language: python
+  types: [text]
+  additional_dependencies: ['forcefield']
+
+- id: forcefield-selftest
+  name: ForceField Selftest
+  description: Run the built-in 116-attack detection test suite
+  entry: forcefield selftest --sensitivity medium
+  language: python
+  pass_filenames: false
+  always_run: true
+  additional_dependencies: ['forcefield']

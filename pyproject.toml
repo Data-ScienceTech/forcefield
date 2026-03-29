@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forcefield"
-version = "0.7.0"
+version = "0.7.2"
 description = "Zero-dependency AI security library -- prompt-injection detection, PII redaction, content safety, rate limiting, abuse detection, tool governance, and security evals for LLMs in 3 lines of Python."
 readme = "README.md"
 license = {text = "Apache-2.0"}

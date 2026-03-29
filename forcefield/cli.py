@@ -402,6 +402,38 @@ def _cmd_scan_filename(args: argparse.Namespace) -> int:
     return 1 if result.dangerous else 0
 
 
+def _cmd_init(args: argparse.Namespace) -> int:
+    import shutil
+    from pathlib import Path
+
+    template = args.template
+    dest_dir = Path(args.directory)
+    dest_file = dest_dir / "constitution.yaml"
+
+    if dest_file.exists() and not args.force:
+        print(f"Already exists: {dest_file}")
+        print("Use --force to overwrite.")
+        return 1
+
+    src = Path(__file__).parent / "constitutions" / f"{template}.yaml"
+    if not src.exists():
+        print(f"Unknown template: {template}")
+        print("Available: default, strict, permissive")
+        return 1
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dest_file)
+
+    print(f"Created {dest_file} (template: {template})")
+    print()
+    print("Next steps:")
+    print(f"  1. Review and customize {dest_file}")
+    print("  2. In VS Code: install the ForceField extension for real-time Sentinel monitoring")
+    print("  3. In Python: Constitution.from_file('.forcefield/constitution.yaml')")
+    print("  4. In CI: forcefield selftest && forcefield audit src/")
+    return 0
+
+
 def _cmd_eval(args: argparse.Namespace) -> int:
     from .evals import EvalSuite, run_eval
 
@@ -493,8 +525,10 @@ def main(argv: list | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="forcefield",
         description="ForceField AI Security Scanner",
+        epilog="Telemetry: ForceField collects anonymous usage statistics (feature counts, SDK version, OS) to improve the product. No prompts, filenames, or PII are ever sent. Disable with FORCEFIELD_NO_TELEMETRY=1 or Guard(telemetry=False). Details: https://datasciencetech.ca/en/python-sdk#telemetry",
     )
-    parser.add_argument("--version", action="version", version="forcefield 0.5.1")
+    from . import __version__
+    parser.add_argument("--version", action="version", version=f"forcefield {__version__}")
     sub = parser.add_subparsers(dest="command")
 
     # selftest
@@ -564,6 +598,13 @@ def main(argv: list | None = None) -> int:
     p_tpl.add_argument("model_id", help="HuggingFace model ID or local path")
     p_tpl.add_argument("--json", action="store_true")
 
+    # init
+    p_init = sub.add_parser("init", help="Scaffold a .forcefield/constitution.yaml for vibe coding governance")
+    p_init.add_argument("--template", default="default", choices=["default", "strict", "permissive"],
+                         help="Constitution template (default: default)")
+    p_init.add_argument("--directory", default=".forcefield", help="Target directory (default: .forcefield)")
+    p_init.add_argument("--force", action="store_true", help="Overwrite existing constitution")
+
     args = parser.parse_args(argv)
 
     if args.command == "selftest":
@@ -586,6 +627,8 @@ def main(argv: list | None = None) -> int:
         return _cmd_eval(args)
     elif args.command == "validate-template":
         return _cmd_validate_template(args)
+    elif args.command == "init":
+        return _cmd_init(args)
     else:
         parser.print_help()
         return 0

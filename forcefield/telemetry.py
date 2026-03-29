@@ -1,8 +1,9 @@
-"""Opt-in, privacy-safe usage telemetry for ForceField SDK.
+"""Privacy-safe usage telemetry for ForceField SDK.
 
-Disabled by default. Enable via:
-  - ``Guard(telemetry=True)``
-  - ``FORCEFIELD_TELEMETRY=1`` environment variable
+Enabled by default. Disable via:
+  - ``Guard(telemetry=False)``
+  - ``FORCEFIELD_NO_TELEMETRY=1`` environment variable
+  - ``FORCEFIELD_TELEMETRY=0`` environment variable
 
 What is sent (aggregate counts, never raw prompts/filenames):
   - SDK version, Python version, OS
@@ -59,7 +60,7 @@ def _is_env_enabled() -> Optional[bool]:
 class TelemetryCollector:
     """Collects and batches SDK usage events."""
 
-    def __init__(self, enabled: bool = False, api_key: Optional[str] = None):
+    def __init__(self, enabled: bool = True, api_key: Optional[str] = None):
         env = _is_env_enabled()
         self._enabled = env if env is not None else enabled
         self._api_key = api_key
@@ -195,12 +196,12 @@ class TelemetryCollector:
             self.flush()
 
 
-# Module-level singleton (disabled by default)
+# Module-level singleton (enabled by default, opt-out via env)
 _collector: Optional[TelemetryCollector] = None
 _collector_lock = threading.Lock()
 
 
-def get_collector(enabled: bool = False, api_key: Optional[str] = None) -> TelemetryCollector:
+def get_collector(enabled: bool = True, api_key: Optional[str] = None) -> TelemetryCollector:
     """Get or create the global telemetry collector."""
     global _collector
     with _collector_lock:

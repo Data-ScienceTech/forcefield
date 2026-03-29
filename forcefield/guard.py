@@ -57,7 +57,7 @@ class Guard:
         custom_blocked_patterns: Optional[List[str]] = None,
         redaction_strategy: str = "mask",
         config: Optional[GuardConfig] = None,
-        telemetry: bool = False,
+        telemetry: bool = True,
         api_key: Optional[str] = None,
     ):
         if config is not None:
@@ -76,6 +76,8 @@ class Guard:
         self._rate_limiter = None
         self._tool_governor = None
         self._protected_paths = None
+        self._audit_events: List[Any] = []
+        self._audit_start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
         from .telemetry import get_collector
         self._telemetry = get_collector(enabled=telemetry, api_key=api_key)
@@ -172,6 +174,8 @@ class Guard:
         elapsed = (time.monotonic() - t0) * 1000
         self._telemetry.record("scan", blocked=blocked, risk_score=risk_score,
                                threat_codes=[t.code for t in threats])
+        self._record_audit("scan", blocked=blocked, risk_score=risk_score,
+                           threat_codes=[t.code for t in threats])
         return ScanResult(
             blocked=blocked,
             action=action,
@@ -206,6 +210,7 @@ class Guard:
         strat = RedactionStrategy(strategy or self._config.redaction_strategy)
         result = _redact(text, strategy=strat, pii_types=pii_types)
         self._telemetry.record("redact")
+        self._record_audit("redact")
         return result
 
     # ------------------------------------------------------------------
@@ -217,6 +222,7 @@ class Guard:
         from .moderation import moderate as _moderate
         result = _moderate(text, strict=strict)
         self._telemetry.record("moderate", blocked=not result.passed)
+        self._record_audit("moderate", blocked=not result.passed)
         return result
 
     # ------------------------------------------------------------------
@@ -236,6 +242,7 @@ class Guard:
         from .moderation import content_safety as _content_safety
         result = _content_safety(text, thresholds=thresholds)
         self._telemetry.record("content_safety", blocked=not result.safe)
+        self._record_audit("content_safety", blocked=not result.safe)
         return result
 
     # ------------------------------------------------------------------
@@ -256,6 +263,7 @@ class Guard:
             block_dangerous=self._config.block_dangerous_tools,
         )
         self._telemetry.record("evaluate_tool", blocked=not result.allowed)
+        self._record_audit("evaluate_tool", blocked=not result.allowed)
         return result
 
     # ------------------------------------------------------------------
@@ -279,6 +287,8 @@ class Guard:
         result = detect_abuse(text, use_embeddings=use_embeddings)
         self._telemetry.record("check_abuse", blocked=result.is_abusive,
                                risk_score=result.abuse_score)
+        self._record_audit("check_abuse", blocked=result.is_abusive,
+                           risk_score=result.abuse_score)
         return result
 
     # ------------------------------------------------------------------
@@ -380,6 +390,7 @@ class Guard:
         from .templates import validate
         result = validate(model_id, template, allowlist=allowlist)
         self._telemetry.record("validate_template")
+        self._record_audit("validate_template")
         return result
 
     # ------------------------------------------------------------------
@@ -441,6 +452,8 @@ class Guard:
         )
         self._telemetry.record("scan_command", blocked=result.dangerous,
                                threat_codes=[f.code for f in result.findings])
+        self._record_audit("scan_command", blocked=result.dangerous,
+                           threat_codes=[f.code for f in result.findings])
         return result
 
     # ------------------------------------------------------------------
@@ -457,6 +470,8 @@ class Guard:
         result = _scan_fn(filename, operation=operation)
         self._telemetry.record("scan_filename", blocked=result.dangerous,
                                threat_codes=[f.code for f in result.findings])
+        self._record_audit("scan_filename", blocked=result.dangerous,
+                           threat_codes=[f.code for f in result.findings])
         return result
 
     # ------------------------------------------------------------------
@@ -518,6 +533,39 @@ class Guard:
             suite = suite_or_path
 
         return run_eval(suite, on_progress=on_progress)
+
+    # ------------------------------------------------------------------
+    # audit trail
+    # ------------------------------------------------------------------
+
+    def _record_audit(self, feature: str, *, blocked: bool = False,
+                      risk_score: float = 0.0,
+                      threat_codes: Optional[List[str]] = None) -> None:
+        from .audit import AuditEvent
+        self._audit_events.append(AuditEvent(
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            feature=feature,
+            blocked=blocked,
+            risk_score=risk_score,
+            threat_codes=threat_codes or [],
+        ))
+        if len(self._audit_events) > 10000:
+            self._audit_events = self._audit_events[-5000:]
+
+    def audit_report(self, *, session_id: Optional[str] = None,
+                     metadata: Optional[Dict] = None) -> Any:
+        """Generate an audit report from all recorded events.
+
+        Returns an ``AuditReport`` with ``to_json()``, ``to_markdown()``,
+        and ``to_file(path)`` methods.
+        """
+        from .audit import AuditReport
+        return AuditReport(
+            events=list(self._audit_events),
+            session_id=session_id,
+            start_time=self._audit_start,
+            metadata=metadata,
+        )
 
     # ------------------------------------------------------------------
     # selftest()
