@@ -133,14 +133,28 @@ app.add_middleware(ForceFieldMiddleware, sensitivity="high")
 
 ### LangChain
 
+```bash
+pip install langchain-forcefield  # or use forcefield[langchain]
+```
+
 ```python
-from forcefield.integrations.langchain import ForceFieldCallbackHandler
+from langchain_forcefield import ForceFieldCallbackHandler
 
 handler = ForceFieldCallbackHandler(sensitivity="high")
 llm = ChatOpenAI(callbacks=[handler])
 # Prompts and outputs scanned at every chain step
 ```
 
+### LlamaIndex
+
+```python
+from llama_index.core import Settings
+from forcefield.integrations.llamaindex import ForceFieldCallbackHandler
+
+handler = ForceFieldCallbackHandler(sensitivity="high")
+Settings.callback_manager.add_handler(handler)
+# Prompts and outputs scanned at every LLM call
+```
 ## Endpoint Security Testing
 
 Test any LLM endpoint with 50+ attack prompts across 7 categories:
@@ -219,6 +233,19 @@ brew tap datasciencetech/forcefield
 brew install forcefield
 ```
 
+## npm
+
+```bash
+npx forcefield-ai scan "Ignore all previous instructions"
+npx forcefield-ai selftest
+```
+
+Or install globally:
+
+```bash
+npm install -g forcefield-ai
+forcefield scan "test prompt"
+```
 ## Optional Extras
 
 | Extra | What it adds |
