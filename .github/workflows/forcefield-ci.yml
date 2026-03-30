@@ -2,12 +2,9 @@ name: ForceField CI
 
 on:
   push:
-    paths:
-      - 'sdk/**'
-      - '.github/workflows/forcefield-ci.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'sdk/**'
+    branches: [main]
 
 jobs:
   test:
@@ -24,19 +21,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        working-directory: sdk
-        run: |
-          pip install -e ".[dev,ml]"
+        run: pip install -e ".[dev,ml]"
 
       - name: Run tests
-        working-directory: sdk
-        run: |
-          python -m pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -v --tb=short
 
       - name: Run selftest
-        working-directory: sdk
-        run: |
-          python -m forcefield selftest
+        run: python -m forcefield selftest
 
   audit:
     runs-on: ubuntu-latest
@@ -49,11 +40,9 @@ jobs:
           python-version: '3.12'
 
       - name: Install ForceField
-        working-directory: sdk
         run: pip install -e ".[ml]"
 
       - name: Audit source for hardcoded prompts and PII
-        working-directory: sdk
         run: |
           python -m forcefield audit forcefield/ --json > audit-report.json
           cat audit-report.json
@@ -63,4 +52,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: forcefield-audit-report
-          path: sdk/audit-report.json
+          path: audit-report.json

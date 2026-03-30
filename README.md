@@ -1,11 +1,14 @@
 # ForceField
 
+[![CI](https://github.com/Data-ScienceTech/forcefield/actions/workflows/forcefield-ci.yml/badge.svg)](https://github.com/Data-ScienceTech/forcefield/actions/workflows/forcefield-ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/forcefield.svg)](https://pypi.org/project/forcefield/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/forcefield.svg)](https://pypi.org/project/forcefield/)
 [![Python versions](https://img.shields.io/pypi/pyversions/forcefield.svg)](https://pypi.org/project/forcefield/)
 [![License](https://img.shields.io/pypi/l/forcefield.svg)](https://pypi.org/project/forcefield/)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/DataScienceTech.forcefield?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=DataScienceTech.forcefield)
 [![Open VSX](https://img.shields.io/open-vsx/v/DataScienceTech/forcefield?label=Open%20VSX)](https://open-vsx.org/extension/DataScienceTech/forcefield)
+[![JetBrains](https://img.shields.io/badge/JetBrains-Marketplace-orange?logo=jetbrains)](https://plugins.jetbrains.com/plugin/com.datasciencetech.forcefield)
+[![npm](https://img.shields.io/npm/v/forcefield-ai?label=npm)](https://www.npmjs.com/package/forcefield-ai)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/Data-ScienceTech/forcefield)
 [![Detection Rate](https://img.shields.io/badge/detection-100%25_with_ML-brightgreen.svg)](https://github.com/Data-ScienceTech/forcefield)
 [![Regex Only](https://img.shields.io/badge/regex_only-81%25-blue.svg)](https://github.com/Data-ScienceTech/forcefield)
