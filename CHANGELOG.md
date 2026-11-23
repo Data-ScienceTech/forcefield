@@ -5,6 +5,16 @@ All notable changes to ForceField will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-11-23
+
+### Fixed
+
+- OpenAI integration now propagates sanitized (PII-redacted) message content to the forwarded request instead of returning the original messages (#1)
+
+### Changed
+
+- Project metadata: Open ForceField branding, updated homepage/documentation URLs, maintainer contact
+
 ## [0.7.2] - 2026-03-27
 
 ### Added
