@@ -36,6 +36,7 @@ def _get_guard():
 
 def _scan_messages(messages: List[Dict[str, Any]], guard: Any) -> List[Dict[str, Any]]:
     """Scan user/tool messages and raise on block."""
+    scanned = []
     for msg in messages:
         role = msg.get("role", "")
         content = msg.get("content", "")
@@ -48,7 +49,8 @@ def _scan_messages(messages: List[Dict[str, Any]], guard: Any) -> List[Dict[str,
                 )
             if result.sanitized_text and result.sanitized_text != content:
                 msg = {**msg, "content": result.sanitized_text}
-    return messages
+        scanned.append(msg)
+    return scanned
 
 
 class PromptBlockedError(Exception):
