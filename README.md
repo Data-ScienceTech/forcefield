@@ -270,15 +270,13 @@ forcefield scan "test prompt"
 
 ## Links
 
-- **Product page**: [datasciencetech.ca/en/python-sdk](https://datasciencetech.ca/en/python-sdk)
+- **Project page**: [datasciencetech.ca/en/open-forcefield](https://datasciencetech.ca/en/open-forcefield)
 - **PyPI**: [pypi.org/project/forcefield](https://pypi.org/project/forcefield/)
-- **Full Gateway**: [datasciencetech.ca/en/force-field](https://datasciencetech.ca/en/force-field)
-- **Demo Lab**: [forcefield.datasciencetech.ca/demo-lab](https://forcefield.datasciencetech.ca/demo-lab)
-- **Security Scanner**: [forcefield.datasciencetech.ca/scan/start](https://forcefield.datasciencetech.ca/scan/start)
+- **Live demo**: [forcefield.datasciencetech.ca](https://forcefield.datasciencetech.ca) — hosted gateway demo
 
 ## About
 
-ForceField is built by [Data Science Technologies](https://datasciencetech.ca). The Python SDK is the local-first complement to the ForceField Enterprise AI Security Gateway -- a 10-step inspection pipeline with a 6-layer detection ensemble deployed on GCP Cloud Run.
+Open ForceField is an open-source project maintained under [Agentic Governance](https://datasciencetech.ca), an independent consulting practice focused on LLM cost controls, hallucination management, and local-first agentic systems.
 
 ## License
 

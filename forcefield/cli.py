@@ -525,7 +525,7 @@ def main(argv: list | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="forcefield",
         description="ForceField AI Security Scanner",
-        epilog="Telemetry: ForceField collects anonymous usage statistics (feature counts, SDK version, OS) to improve the product. No prompts, filenames, or PII are ever sent. Disable with FORCEFIELD_NO_TELEMETRY=1 or Guard(telemetry=False). Details: https://datasciencetech.ca/en/python-sdk#telemetry",
+        epilog="Telemetry: ForceField collects anonymous usage statistics (feature counts, SDK version, OS) to improve the product. No prompts, filenames, or PII are ever sent. Disable with FORCEFIELD_NO_TELEMETRY=1 or Guard(telemetry=False). Details: https://datasciencetech.ca/en/open-forcefield",
     )
     from . import __version__
     parser.add_argument("--version", action="version", version=f"forcefield {__version__}")
