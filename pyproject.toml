@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
 authors = [
-    {name = "Data Science Tech", email = "security@datasciencetech.ca"},
+    {name = "Open ForceField", email = "info@datasciencetech.ca"},
 ]
 keywords = [
     "llm", "llm-security", "security", "prompt-injection", "pii",
@@ -74,8 +74,8 @@ dev = [
 forcefield = "forcefield.cli:main"
 
 [project.urls]
-Homepage = "https://datasciencetech.ca/en/python-sdk"
-Documentation = "https://datasciencetech.ca/en/python-sdk"
+Homepage = "https://datasciencetech.ca/en/open-forcefield"
+Documentation = "https://datasciencetech.ca/en/open-forcefield"
 Repository = "https://github.com/Data-ScienceTech/forcefield"
 Issues = "https://github.com/Data-ScienceTech/forcefield/issues"
 Changelog = "https://github.com/Data-ScienceTech/forcefield/releases"

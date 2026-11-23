@@ -1,4 +1,4 @@
-# ForceField
+# Open ForceField
 
 [![CI](https://github.com/Data-ScienceTech/forcefield/actions/workflows/forcefield-ci.yml/badge.svg)](https://github.com/Data-ScienceTech/forcefield/actions/workflows/forcefield-ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/forcefield.svg)](https://pypi.org/project/forcefield/)

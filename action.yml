@@ -1,6 +1,6 @@
-name: 'ForceField AI Security Scanner'
+name: 'Open ForceField AI Security Scanner'
 description: 'Scan for prompt injection, PII leaks, and LLM attacks. Run security evals with 116 built-in attack prompts.'
-author: 'Data Science Technologies'
+author: 'Agentic Governance'
 
 branding:
   icon: 'shield'
